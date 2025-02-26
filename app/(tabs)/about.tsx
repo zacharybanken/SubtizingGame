@@ -112,7 +112,10 @@ export default function StatsScreen() {
       )}
       <View style={styles.container}>
         {isTimedDataEmpty ? (
+          <>
+          <Text style={styles.text}>Timed (N = { timedTotal })</Text>
           <Text style={styles.noDataText}>Come back with more data!</Text>
+          </>
         ) : (
           <>
           <Text style={styles.text}>Timed (N = { timedTotal })</Text>
@@ -153,7 +156,7 @@ const flashChartConfig = {
     fontSize: 12,
     fontFamily: 'System', // Use the same font as the rest of the app
   },
-  barPercentage: isMobile ? 0.1 : 1,
+  barPercentage: 0.1,
 };
 
 const timedChartConfig = {
@@ -185,7 +188,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   chart: {
-    marginVertical: 8,
+    marginVertical: 30,
     borderRadius: 16,
   },
   divider: {
