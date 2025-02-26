@@ -33,7 +33,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 export const useData = () => useContext(DataContext);
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
-  const [numDots, setNumDots] = useState([1, 25]);
+  const [numDots, setNumDots] = useState([1, 10]);
   const [correctArrayState, setCorrectArrayState] = useState(
     Array.from({ length: numDots[1] }, () => ({ total: 0, correct: 0 }))
   );
@@ -46,7 +46,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [timerSpeed, setTimerSpeed] = useState(1000); // Default timer speed in ms
 
   const [distractionDotsEnabled, setDistractionDotsEnabled] = useState(false);
-  const [distractionDots, setDistractionDots] = useState([1, 25]);
+  const [distractionDots, setDistractionDots] = useState([1, 5]);
 
   // Update the arrays when numDots changes
   useEffect(() => {

@@ -35,14 +35,7 @@ export default function App({ navigation }: { navigation: NavigationProp<any> })
   const [showStartScreen, setShowStartScreen] = useState(true);
 
   useEffect(() => {
-    if (Platform.OS === 'web') {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    
     return () => {
-      if (Platform.OS === 'web') {
-        window.removeEventListener('keydown', handleKeyDown);
-      }
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
@@ -157,45 +150,6 @@ export default function App({ navigation }: { navigation: NavigationProp<any> })
 
     return dotsCoordsArray;
   }
-
-  const handleKeyDown = (event: KeyboardEvent) => {
-    const currentTimedMode = dataContext?.timedModeEnabled;
-
-    event.preventDefault();
-
-    console.log('showDots', showDots);
-    console.log('timedModeEnabled', currentTimedMode);
-    setShowDots(false);
-
-    if (!currentTimedMode && inputLocked) {
-      console.log('Ignoring key press - dots visible or input locked');
-      return;
-    }
-
-    const key = event.key;
-    console.log('key pressed ', key);
-
-    if (key === 'Enter') {
-      console.log('Enter key pressed');
-      if (showStartScreen) {
-        startGame();
-      }
-      return;
-    }
-    // go back to the start screen if the user presses 'q'
-    if (key === 'q') {
-      console.log('q key pressed');
-      setShowStartScreen(true);
-      return;
-    }
-    
-    const numericGuess = parseInt(key, 10);
-    console.log('numericGuess ', numericGuess);
-    if (!isNaN(numericGuess) && numericGuess >= 1 && numericGuess <= 10) {
-      console.log('About to check answer with showDots = ', showDots);
-      checkAnswer(numericGuess);
-    }
-  };
 
   const checkAnswer = (guess: number) => {
     console.log('checking guess ', guess);
@@ -319,8 +273,8 @@ export default function App({ navigation }: { navigation: NavigationProp<any> })
               <Text style={styles.message}>{message}</Text>
             </View>
           )}
-          <TouchableOpacity onPress={stopGame} style={styles.stopButton}>
-            <Text style={styles.stopButtonText}>Stop</Text>
+          <TouchableOpacity onPress={stopGame} style={styles.startButton}>
+            <Text style={styles.startButtonText}>Stop</Text>
           </TouchableOpacity>
         </>
       )}
