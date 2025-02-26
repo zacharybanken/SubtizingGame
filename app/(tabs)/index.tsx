@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
 import { useData } from '../DataContext';
 import { useFocusEffect } from '@react-navigation/native';
-import { CommonActions } from '@react-navigation/native';
 
 import type { NavigationProp } from '@react-navigation/native';
 
@@ -20,11 +19,12 @@ export default function App({ navigation }: { navigation: NavigationProp<any> })
     updateFlashData,
     updateTimedData,
     timerSpeed,
+    distractionDotsEnabled,
+    distractionDots,
+    numDots,
   } = dataContext;
   
-  const [numDots, setNumDots] = useState(0);
-  const numDotsRef = useRef(numDots);
-  const [dots, setDots] = useState<{ x: number; y: number }[]>([]);
+  const [dots, setDots] = useState<{ x: number; y: number; color: string }[]>([]);
   const [showDots, setShowDots] = useState(true);
   const [message, setMessage] = useState("");
   const [timer, setTimer] = useState(0);
@@ -63,6 +63,18 @@ export default function App({ navigation }: { navigation: NavigationProp<any> })
     resetGame();
   };
 
+  const stopGame = () => {
+    setShowStartScreen(true);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (hideDotsTimeoutRef.current) {
+      clearTimeout(hideDotsTimeoutRef.current);
+      hideDotsTimeoutRef.current = null;
+    }
+  };
+
   const resetGame = () => {
     // Clear any existing timers
     if (timerRef.current) {
@@ -84,7 +96,6 @@ export default function App({ navigation }: { navigation: NavigationProp<any> })
     // Generate new dots
     const dotsCoordsArray = generateDotsCoords();
     setDots(dotsCoordsArray);
-    setNumDots(dotsCoordsArray.length);
     
     // Start timer
     startTimeRef.current = Date.now();
@@ -110,34 +121,38 @@ export default function App({ navigation }: { navigation: NavigationProp<any> })
     console.log('Context values updated:', {
       timedModeEnabled,
       timerSpeed,
+      distractionDots,
+      numDots,
     });
-  }, [timedModeEnabled, timerSpeed]);
-
-  useEffect(() => {
-    numDotsRef.current = numDots;
-  }, [numDots]);
+  }, [timedModeEnabled, timerSpeed, distractionDots, numDots]);
 
   function generateDotsCoords() {
     // Generate dots one-by-one so their coordinates don't overlap.
-    const count = Math.floor(Math.random() * 9) + 1; // Between 1 and 10 dots
-    const dotsCoordsArray: { x: number; y: number }[] = [];
+    const count = Math.floor(Math.random() * (numDots[1] - numDots[0] + 1)) + numDots[0]; // Random number of dots within the range
+    const distractionCount = distractionDotsEnabled ? Math.floor(Math.random() * (distractionDots[1] - distractionDots[0] + 1)) + distractionDots[0] : 0; // Random number of distraction dots within the range
+    const dotsCoordsArray: { x: number; y: number; color: string }[] = [];
 
     function distanceBetweenCoords(x1: number, y1: number, x2: number, y2: number) {
       return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
     }
 
-    function generateNewRandomCoords(array: { x: number; y: number }[]) {
+    function generateNewRandomCoords(array: { x: number; y: number; color: string }[]) {
       const x_coord = Math.random() * 200;
       const y_coord = Math.random() * 200;
       if (array.some((dot) => distanceBetweenCoords(dot.x, dot.y, x_coord, y_coord) < 25)) {
         return generateNewRandomCoords(array);
       }
-      return { x: x_coord, y: y_coord };
+      return { x: x_coord, y: y_coord, color: '#ffd33d' }; // Default color is yellow
     }
 
     for (let i = 0; i < count; i++) {
       const ithCoords = generateNewRandomCoords(dotsCoordsArray);
-      dotsCoordsArray.push({ x: ithCoords.x, y: ithCoords.y });
+      dotsCoordsArray.push({ x: ithCoords.x, y: ithCoords.y, color: ithCoords.color });
+    }
+
+    for (let i = 0; i < distractionCount; i++) {
+      const ithCoords = generateNewRandomCoords(dotsCoordsArray);
+      dotsCoordsArray.push({ x: ithCoords.x, y: ithCoords.y, color: '#0000ff' }); // Distraction dots are blue
     }
 
     return dotsCoordsArray;
@@ -184,7 +199,7 @@ export default function App({ navigation }: { navigation: NavigationProp<any> })
 
   const checkAnswer = (guess: number) => {
     console.log('checking guess ', guess);
-    const currentNumDots = numDotsRef.current;
+    const currentNumDots = dots.filter(dot => dot.color === '#ffd33d').length; // Count only the yellow dots
     const isCorrect = guess === currentNumDots;
     const currentTimer = Date.now() - startTimeRef.current;
     console.log('currentTimer ', currentTimer);
@@ -257,52 +272,57 @@ export default function App({ navigation }: { navigation: NavigationProp<any> })
     <View style={styles.container}>
       {showStartScreen ? (
         <View style={styles.startScreen}>
-          <Text style={styles.startScreenText}>Subtizing Game ({timedModeEnabled ? "Timed Mode" : "Flash Mode"})</Text>
+          <Text style={styles.startScreenText}>{timedModeEnabled ? "Timed Mode" : "Flash Mode"}</Text>
           <TouchableOpacity onPress={startGame} style={styles.startButton}>
             <Text style={styles.startButtonText}>Start</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        timedModeEnabled ? (
-          // Timed Mode. The dots and buttons are visible at the same time, and a clock counts up the time it takes to answer.
-          <View style={styles.container}>
-            <View style={styles.dotContainer}>
-              {dots.map((dot, index) => (
-                <View key={index} style={[styles.dot, { left: dot.x, top: dot.y }]} />
-              ))}
-            </View>
-            <View style={styles.buttonContainer}>
-              {[...Array(10).keys()].map((num) => (
-                <TouchableOpacity key={num} onPress={() => checkAnswer(num + 1)} style={styles.button}>
-                  <Text style={styles.buttonText}>{num + 1}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <Text style={styles.message}>{message}</Text>
-            <Text style={styles.timer}>Time: {timer}ms</Text>
-          </View>
-        ) : (
-          // Flash Mode
-          <View style={styles.container}>
-            {showDots && (
+        <>
+          {timedModeEnabled ? (
+            // Timed Mode. The dots and buttons are visible at the same time, and a clock counts up the time it takes to answer.
+            <View style={styles.container}>
               <View style={styles.dotContainer}>
                 {dots.map((dot, index) => (
-                  <View key={index} style={[styles.dot, { left: dot.x, top: dot.y }]} />
+                  <View key={index} style={[styles.dot, { left: dot.x, top: dot.y, backgroundColor: dot.color }]} />
                 ))}
               </View>
-            )}
-            {!showDots && (
               <View style={styles.buttonContainer}>
-                {[...Array(10).keys()].map((num) => (
-                  <TouchableOpacity key={num} onPress={() => checkAnswer(num + 1)} style={styles.button}>
-                    <Text style={styles.buttonText}>{num + 1}</Text>
+                {Array.from({ length: numDots[1] - numDots[0] + 1 }, (_, i) => i + numDots[0]).map((num) => (
+                  <TouchableOpacity key={num} onPress={() => checkAnswer(num)} style={styles.button}>
+                    <Text style={styles.buttonText}>{num}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
-            )}
-            <Text style={styles.message}>{message}</Text>
-          </View>
-        )
+              <Text style={styles.message}>{message}</Text>
+              <Text style={styles.timer}>Time: {timer}ms</Text>
+            </View>
+          ) : (
+            // Flash Mode
+            <View style={styles.container}>
+              {showDots && (
+                <View style={styles.dotContainer}>
+                  {dots.map((dot, index) => (
+                    <View key={index} style={[styles.dot, { left: dot.x, top: dot.y, backgroundColor: dot.color }]} />
+                  ))}
+                </View>
+              )}
+              {!showDots && (
+                <View style={styles.buttonContainer}>
+                  {Array.from({ length: numDots[1] - numDots[0] + 1 }, (_, i) => i + numDots[0]).map((num) => (
+                    <TouchableOpacity key={num} onPress={() => checkAnswer(num)} style={styles.button}>
+                      <Text style={styles.buttonText}>{num}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+              <Text style={styles.message}>{message}</Text>
+            </View>
+          )}
+          <TouchableOpacity onPress={stopGame} style={styles.stopButton}>
+            <Text style={styles.stopButtonText}>Stop</Text>
+          </TouchableOpacity>
+        </>
       )}
     </View>
   );
@@ -344,7 +364,6 @@ const styles = StyleSheet.create({
   dot: {
     width: 20,
     height: 20,
-    backgroundColor: '#ffd33d',
     borderRadius: 10,
     position: "absolute",
   },
@@ -377,5 +396,15 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     color: '#ffd33d',
+  },
+  stopButton: {
+    padding: 10,
+    backgroundColor: 'red',
+    borderRadius: 5,
+    marginTop: 20,
+  },
+  stopButtonText: {
+    fontSize: 18,
+    color: '#ffffff',
   },
 });

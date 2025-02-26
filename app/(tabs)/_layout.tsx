@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
 import { Tabs } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-
+import * as Font from 'expo-font';
+import AppLoading from 'expo-app-loading';
 
 export default function TabLayout() {
+  const [fontsLoaded] = Font.useFonts({
+    Ionicons: require('@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf'),
+  });
+
+  if (!fontsLoaded) {
+    return <AppLoading />;
+  }
 
   return (
     <Tabs

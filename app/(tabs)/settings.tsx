@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
 import Slider from '@react-native-community/slider';
+import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import { useData } from '../DataContext';
 
 export default function SettingsScreen() {
@@ -8,7 +9,20 @@ export default function SettingsScreen() {
   if (!dataContext) {
     return null; // or handle the undefined case appropriately
   }
-  const { setCorrectArrayState, setTimeToAnswerCorrectArrayState, timedModeEnabled, setTimedModeEnabled, timerSpeed, setTimerSpeed } = dataContext;
+  const { 
+    setCorrectArrayState, 
+    setTimeToAnswerCorrectArrayState, 
+    timedModeEnabled, 
+    setTimedModeEnabled, 
+    timerSpeed, 
+    setTimerSpeed,
+    distractionDotsEnabled,
+    setDistractionDotsEnabled,
+    distractionDots,
+    setDistractionDots,
+    numDots,
+    setNumDots
+  } = dataContext;
 
   const toggleMode = () => {
     setTimedModeEnabled(!timedModeEnabled);
@@ -25,25 +39,74 @@ export default function SettingsScreen() {
     setCorrectArrayState(Array.from({ length: 10 }, () => ({ total: 0, correct: 0 })));
   };
 
+  const toggleDistractionDots = () => {
+    setDistractionDotsEnabled(!distractionDotsEnabled);
+  };
+
+  const handleDistractionDotsChange = (values: number[]) => {
+    setDistractionDots(values);
+  };
+
+  const handleNumDotsChange = (values: number[]) => {
+    setNumDots(values);
+  };
+
   return (
     <View style={styles.container}>
+      <Text style={styles.text}>Number of dots: {numDots[0]}-{numDots[1]}</Text>
+      <MultiSlider
+        min={1}
+        max={25}
+        step={1}
+        values={numDots}
+        onValuesChange={handleNumDotsChange}
+        selectedStyle={{ backgroundColor: "#ffd33d" }}
+        unselectedStyle={{ backgroundColor: "#ffffff" }}
+        markerStyle={{ backgroundColor: "#ffd33d" }}
+        minMarkerOverlapDistance={1}
+      />
+
       <TouchableOpacity onPress={toggleMode} style={styles.modeButton}>
         <Text style={styles.modeButtonText}>{ timedModeEnabled ? 'Enable Flash Mode' : 'Enable Timed Mode'}</Text>
       </TouchableOpacity>
-      
-      <Text style={styles.text}>Flash Speed: {timerSpeed} ms (resets stats)</Text>
-      <Slider
-        style={styles.slider}
-        minimumValue={100}
-        maximumValue={2000}
-        step={100}
-        value={timerSpeed}
-        onValueChange={handleSliderChange}
-        minimumTrackTintColor="#ffd33d"
-        maximumTrackTintColor="#ffffff"
-        thumbTintColor="#ffd33d"
-      />
-      
+      {!timedModeEnabled && (
+        <>
+          <Text style={styles.text}>Flash speed: {timerSpeed} ms</Text>
+          <Slider
+            style={styles.slider}
+            minimumValue={100}
+            maximumValue={2000}
+            step={100}
+            value={timerSpeed}
+            onValueChange={handleSliderChange}
+            minimumTrackTintColor="#ffd33d"
+            maximumTrackTintColor="#ffffff"
+            thumbTintColor="#ffd33d"
+          />
+        </>
+      )}
+
+      <TouchableOpacity onPress={toggleDistractionDots} style={styles.modeButton}>
+        <Text style={styles.modeButtonText}>{ distractionDotsEnabled ? 'Disable Distraction Dots' : 'Enable Distraction Dots'}</Text>
+      </TouchableOpacity>
+
+      {distractionDotsEnabled && (
+        <>
+          <Text style={styles.text}>Number of distraction dots: {distractionDots[0]}-{distractionDots[1]}</Text>
+          <MultiSlider
+            min={1}
+            max={25}
+            step={1}
+            values={distractionDots}
+            onValuesChange={handleDistractionDotsChange}
+            selectedStyle={{ backgroundColor: "#ffd33d" }}
+            unselectedStyle={{ backgroundColor: "#ffffff" }}
+            markerStyle={{ backgroundColor: "#ffd33d" }}
+            minMarkerOverlapDistance={1}
+          />  
+        </>
+      )}
+
       <TouchableOpacity onPress={resetStatistics} style={styles.resetButton}>
         <Text style={styles.resetButtonText}>Reset Data</Text>
       </TouchableOpacity>
@@ -57,6 +120,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#25292e',
     justifyContent: "center",
     alignItems: "center",
+    padding: 20,
   },
   text: {
     color: '#fff',
@@ -86,6 +150,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 5,
     marginBottom: 20,
+    alignContent: 'center',
   },
   resetButtonText: {
     color: '#fff',

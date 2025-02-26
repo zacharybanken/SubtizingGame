@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Text, View, StyleSheet, Dimensions } from "react-native";
+import { Text, View, StyleSheet, Dimensions, Platform } from "react-native";
 import { BarChart } from 'react-native-chart-kit';
 import { useData } from '../DataContext';
+
+const isMobile = Platform.OS === 'ios' || Platform.OS === 'android';
 
 export default function StatsScreen() {
   const dataContext = useData();
@@ -9,7 +11,7 @@ export default function StatsScreen() {
     return null; // or handle the undefined case appropriately
   }
   
-  const { correctArrayState, timeToAnswerCorrectArrayState, timerSpeed } = dataContext;
+  const { correctArrayState, timeToAnswerCorrectArrayState, timerSpeed, numDots } = dataContext;
   const screenWidth = Dimensions.get('window').width;
   const chartWidth = screenWidth - 40; // Adjust width to fit the screen
   
@@ -38,14 +40,14 @@ export default function StatsScreen() {
   };
 
   // Initialize with empty data first
-  const [flashData, setFlashData] = useState({
-    labels: Array.from({ length: 10 }, (_, i) => (i + 1).toString()),
-    datasets: [{ data: Array(10).fill(0) }],
+  const [flashData, setFlashData] = useState<{ labels: string[], datasets: { data: number[] }[] }>({
+    labels: [],
+    datasets: [{ data: [] }],
   });
 
-  const [timedData, setTimedData] = useState({
-    labels: Array.from({ length: 10 }, (_, i) => (i + 1).toString()),
-    datasets: [{ data: Array(10).fill(0) }],
+  const [timedData, setTimedData] = useState<{ labels: string[], datasets: { data: number[] }[] }>({
+    labels: [],
+    datasets: [{ data: [] }],
   });
 
   // Explicitly handle flash data updates
@@ -54,12 +56,15 @@ export default function StatsScreen() {
     const percentageArray = calculatePercentageArray();
     console.log("Flash data calculated:", percentageArray);
     
+    const filteredLabels = Array.from({ length: numDots[1] - numDots[0] + 1 }, (_, i) => (i + numDots[0]).toString());
+    const filteredData = percentageArray.slice(numDots[0] - 1, numDots[1]);
+    
     setFlashData({
-      labels: Array.from({ length: 10 }, (_, i) => (i + 1).toString()),
-      datasets: [{ data: percentageArray }],
+      labels: filteredLabels,
+      datasets: [{ data: filteredData }],
     });
     console.log("setting flash data");
-  }, [correctArrayState]);
+  }, [correctArrayState, numDots]);
 
   // Explicitly handle timed data updates
   useEffect(() => {
@@ -67,45 +72,66 @@ export default function StatsScreen() {
     const avgTimeArray = calculateAvgTimeArray();
     console.log("Timed data calculated:", avgTimeArray);
     
+    const filteredLabels = Array.from({ length: numDots[1] - numDots[0] + 1 }, (_, i) => (i + numDots[0]).toString());
+    const filteredData = avgTimeArray.slice(numDots[0] - 1, numDots[1]);
+    
     setTimedData({
-      labels: Array.from({ length: 10 }, (_, i) => (i + 1).toString()),
-      datasets: [{ data: avgTimeArray }],
-
+      labels: filteredLabels,
+      datasets: [{ data: filteredData }],
     });
     console.log("setting timed data");
-  }, [timeToAnswerCorrectArrayState]);
+  }, [timeToAnswerCorrectArrayState, numDots]);
 
   const flashTotal = correctArrayState.reduce((sum, item) => sum + item.total, 0);
   console.log("flashTotal:", flashTotal);
   const timedTotal = timeToAnswerCorrectArrayState.reduce((sum, item) => sum + item.total, 0);
   console.log("timedTotal:", timedTotal);
 
+  const isFlashDataEmpty = flashData.datasets[0].data.every((item) => item === 0);
+  const isTimedDataEmpty = timedData.datasets[0].data.every((item) => item === 0);
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>Flash ({ timerSpeed }ms, N = { flashTotal })</Text>
-      <BarChart
-        style={styles.chart}
-        data={flashData}
-        width={chartWidth}
-        height={220}
-        yAxisLabel=""
-        yAxisSuffix='%'
-        chartConfig={flashChartConfig}
-        verticalLabelRotation={0}
-      />
-      <View style={styles.divider} />
-      <Text style={styles.text}>Timed (N = { timedTotal })</Text>
-      <BarChart
-        style={styles.chart}
-        data={timedData}
-        width={chartWidth}
-        height={220}
-        yAxisLabel=""
-        yAxisSuffix='ms'
-        chartConfig={timedChartConfig}
-        verticalLabelRotation={0}
-      />
-    </View>
+    <>
+      {!isFlashDataEmpty && (
+        <View style={styles.container}>
+          <Text style={styles.text}>Flash ({ timerSpeed }ms, N = { flashTotal })</Text>
+          <View style={styles.chartContainer}>
+            <BarChart
+              style={styles.chart}
+              data={flashData}
+              width={chartWidth}
+              height={220}
+              yAxisLabel=""
+              yAxisSuffix='%'
+              chartConfig={flashChartConfig}
+              verticalLabelRotation={0}
+            />
+          </View>
+          <View style={styles.divider} />
+        </View>
+      )}
+      <View style={styles.container}>
+        {isTimedDataEmpty ? (
+          <Text style={styles.noDataText}>Come back with more data!</Text>
+        ) : (
+          <>
+          <Text style={styles.text}>Timed (N = { timedTotal })</Text>
+          <View style={styles.chartContainer}>
+            <BarChart
+              style={styles.chart}
+              data={timedData}
+              width={chartWidth}
+              height={220}
+              yAxisLabel=""
+              yAxisSuffix='ms'
+              chartConfig={timedChartConfig}
+              verticalLabelRotation={0}
+            />
+          </View>
+          </>
+        )}
+      </View>
+    </>
   );
 }
 
@@ -127,6 +153,7 @@ const flashChartConfig = {
     fontSize: 12,
     fontFamily: 'System', // Use the same font as the rest of the app
   },
+  barPercentage: isMobile ? 0.1 : 1,
 };
 
 const timedChartConfig = {
@@ -140,11 +167,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#25292e',
     justifyContent: "center",
     alignItems: "center",
+    padding: 20,
   },
   text: {
     color: '#fff',
     fontSize: 20,
     marginBottom: 20,
+  },
+  noDataText: {
+    color: '#fff',
+    fontSize: 18,
+    marginTop: 20,
+  },
+  chartContainer: {
+    padding: 0,
+    width: '100%',
+    alignItems: 'center',
   },
   chart: {
     marginVertical: 8,

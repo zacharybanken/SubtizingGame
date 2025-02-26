@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 import { ReactNode } from 'react';
 
 interface DataContextType {
@@ -13,7 +13,16 @@ interface DataContextType {
 
   timerSpeed: number;
   setTimerSpeed: React.Dispatch<React.SetStateAction<number>>;
-  
+
+  distractionDotsEnabled: boolean;
+  setDistractionDotsEnabled: React.Dispatch<React.SetStateAction<boolean>>;
+
+  distractionDots: number[];
+  setDistractionDots: React.Dispatch<React.SetStateAction<number[]>>;
+
+  numDots: number[];
+  setNumDots: React.Dispatch<React.SetStateAction<number[]>>;
+
   // Add these helper functions to make updating data easier
   updateFlashData: (index: number, isCorrect: boolean) => void;
   updateTimedData: (index: number, isCorrect: boolean, timeInMs: number) => void;
@@ -24,23 +33,33 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 export const useData = () => useContext(DataContext);
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
+  const [numDots, setNumDots] = useState([1, 25]);
   const [correctArrayState, setCorrectArrayState] = useState(
-    Array.from({ length: 10 }, () => ({ total: 0, correct: 0 }))
+    Array.from({ length: numDots[1] }, () => ({ total: 0, correct: 0 }))
   );
   
   const [timeToAnswerCorrectArrayState, setTimeToAnswerCorrectArrayState] = useState(
-    Array.from({ length: 10 }, () => ({ total: 0, totalTime: 0 }))
+    Array.from({ length: numDots[1] }, () => ({ total: 0, totalTime: 0 }))
   );
   
   const [timedModeEnabled, setTimedModeEnabled] = useState(true);
   const [timerSpeed, setTimerSpeed] = useState(1000); // Default timer speed in ms
+
+  const [distractionDotsEnabled, setDistractionDotsEnabled] = useState(false);
+  const [distractionDots, setDistractionDots] = useState([1, 25]);
+
+  // Update the arrays when numDots changes
+  useEffect(() => {
+    setCorrectArrayState(Array.from({ length: numDots[1] }, () => ({ total: 0, correct: 0 })));
+    setTimeToAnswerCorrectArrayState(Array.from({ length: numDots[1] }, () => ({ total: 0, totalTime: 0 })));
+  }, [numDots]);
 
   // Helper function to update flash data
   const updateFlashData = (index: number, isCorrect: boolean) => {
     console.log('updating flash data with timeModeEnabled: ', timedModeEnabled);
     setCorrectArrayState(prev => {
       const newArray = [...prev];
-      // Ensure index is within bounds (1-10 -> 0-9)
+      // Ensure index is within bounds (1-numDots[1] -> 0-(numDots[1]-1))
       const arrayIndex = index - 1;
       if (arrayIndex >= 0 && arrayIndex < newArray.length) {
         newArray[arrayIndex] = {
@@ -58,7 +77,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     if (isCorrect) {
       setTimeToAnswerCorrectArrayState(prev => {
         const newArray = [...prev];
-        // Ensure index is within bounds (1-10 -> 0-9)
+        // Ensure index is within bounds (1-numDots[1] -> 0-(numDots[1]-1))
         const arrayIndex = index - 1;
         if (arrayIndex >= 0 && arrayIndex < newArray.length) {
           newArray[arrayIndex] = {
@@ -82,6 +101,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setTimedModeEnabled,
         timerSpeed,
         setTimerSpeed,
+        distractionDotsEnabled,
+        setDistractionDotsEnabled,
+        distractionDots,
+        setDistractionDots,
+        numDots,
+        setNumDots,
         updateFlashData,
         updateTimedData
       }}

@@ -14,7 +14,7 @@ export default function LaunchScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Subtizing Game</Text>
       <TouchableOpacity style={styles.button} onPress={handlePress}>
-        <Text>Play</Text>
+        <Text>Launch</Text>
       </TouchableOpacity>
     </View>
   );
